@@ -1,6 +1,5 @@
-import { ActivityIndicator, Button, KeyboardAvoidingView, SafeAreaView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Button, KeyboardAvoidingView, SafeAreaView, StyleSheet, Text, TextInput, View, ScrollView } from "react-native";
 import Header from "./_components/Header";
-import { ScrollView } from "react-native-gesture-handler";
 import Footer from "./_components/Footer";
 import { useState } from "react";
 import { Dialog, Icon } from "@rneui/themed";

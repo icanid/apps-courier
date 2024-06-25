@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, TouchableOpacity, ImageBackground} from 'react-native';
-import { Camera } from 'expo-camera'
+import { Camera, CameraView } from 'expo-camera'
 import { useRef, useState } from 'react';
 
 const CanvasCamera = (props) => {
@@ -8,7 +8,8 @@ const CanvasCamera = (props) => {
     const [startCamera, setStartCamera] = useState(props.startCamera ? props.startCamera : false);
     const [previewVisible, setPreviewVisible] = useState(false);
     const [capturedImage, setCapturedImage] = useState(null);
-    const [cameraType, setCameraType] = useState(Camera.Constants.Type.back);
+    // const [cameraType, setCameraType] = useState(Camera.Constants.Type.back);
+    const [cameraType, setCameraType] = useState('back');
     const [flashMode, setFlashMode] = useState('off');
 
     let camera = useRef();
@@ -30,7 +31,7 @@ const CanvasCamera = (props) => {
             const data = await camera.takePictureAsync(options);
             const source = data.uri;
             if (source) {
-                await camera.pausePreview();
+                // await camera.pausePreview();
                 setPreviewVisible(true);
                 setCapturedImage(data);
             }
@@ -81,8 +82,9 @@ const CanvasCamera = (props) => {
           {previewVisible && capturedImage ? (
             <CameraPreview photo={capturedImage} savePhoto={__savePhoto} retakePicture={__retakePicture} />
           ) : (
-            <Camera
-              type={cameraType}
+            <CameraView
+              // type={cameraType}
+              facing={cameraType}
               flashMode={flashMode}
               style={{flex: 1}}
               ref={(r) => {
@@ -130,7 +132,7 @@ const CanvasCamera = (props) => {
                   </View>
                 </View>
               </View>
-            </Camera>
+            </CameraView>
           )}
         </View>
       ) : (

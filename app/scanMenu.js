@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, Image, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
 import Header from './_components/Header';
 import Footer from './_components/Footer';
 // import { BarCodeScanner } from 'expo-barcode-scanner';
@@ -27,13 +27,12 @@ import * as ImageManipulator from 'expo-image-manipulator';
 // import refundtake from '../assets/refundtake.png';
 
 import CanvasCamera from './_components/CanvasCamera';
-import { TextInput } from 'react-native-gesture-handler';
 import CanvasSignature from './_components/CanvasSignature';
 import { ScanMenu } from './_components/RolesScan';
 import { router } from 'expo-router';
 
 export default function scanMenu() {
-    
+ 
     const [hasPermission, setHasPermission] = useState(null);
     const [scanned, setScanned] = useState(false);
     const [choice, setChoice] = useState(null);
@@ -100,7 +99,8 @@ export default function scanMenu() {
       getValueFor('secured_role');
         const getBarCodeScannerPermissions = async () => {
           // const { status } = await BarCodeScanner.requestPermissionsAsync();
-          const { status } = await Camera.getCameraPermissionsAsync();
+          const { status } = await Camera.requestCameraPermissionsAsync();
+          console.log(status);
           setHasPermission(status === 'granted');
         };
         getBarCodeScannerPermissions();
@@ -370,8 +370,6 @@ export default function scanMenu() {
         
         </View>
         <Dialog isVisible={showReceipt} onBackdropPress={()=> {resetAll();}}>
-
-          <Dialog.Title title=""/>
               <View style={{ padding:10 }}>
                 <Text>Diterima Oleh :</Text>
                 <View style={styles.inputView}>

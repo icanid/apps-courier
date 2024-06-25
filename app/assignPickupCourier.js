@@ -34,8 +34,9 @@ export default function assignPickupCourier(){
     const [openCamera, setOpenCamera] = useState(false);
 
     const [shippings, setShippings] = useState([]);
-    const [time, setTime] = useState('');
-    const [date, setDate] = useState('');
+    
+    const [awbSuccess, setAwbSuccess] = useState([]);
+    const [awbFail, setAwbFail] = useState([]);
 
     const [loading, setLoading] = useState(false);
 
@@ -94,8 +95,8 @@ export default function assignPickupCourier(){
       }).catch(function(error){
         console.log(error);
         // console.error(error.response.data);
-        //       console.error(error.response.status);
-        //       console.error(error.response.headers);
+        // console.error(error.response.status);
+        // console.error(error.response.headers);
       }).finally(function(){
         setPopCityLoading(false);
       });
@@ -208,7 +209,6 @@ export default function assignPickupCourier(){
     }
 
     const assignHandler = async() =>{
-        
         if(shippings.length > 20){
             alert('Batas maximum 20 AWB');
             return false;
@@ -243,9 +243,12 @@ export default function assignPickupCourier(){
               data:data
             }).then(function (response) {
                 // berhasil
-                // console.log(response);
+                // console.log(response.data.data);
+                // console.log(response.data.data);
+                setAwbSuccess(response.data.data.success);
+                setAwbFail(response.data.data.fail);
                 // console.log(response.data);
-                alert(response.data.message);
+                // alert(response.data.message);
                 // setData(response.data.data.data);
               }).catch(function (error) {
                 // masuk ke server tapi return error (unautorized dll)
@@ -397,15 +400,25 @@ export default function assignPickupCourier(){
                 <ScrollView>
                 {
                     shippings.map((l, i) => (
-                        <ListItem bottomDivider key={i}> 
-                        <ListItem.CheckBox
-                        // Use ThemeProvider to change the defaults of the checkbox
-                        iconType="material-community"
-                        checkedIcon="checkbox-marked"
-                        uncheckedIcon="checkbox-blank-outline"
-                        checked={false}
-                        onPress={()=>{}}
-                        />
+                    <ListItem bottomDivider key={i}> 
+                    {
+                        awbSuccess.includes(l) &&
+                        <TouchableOpacity onPress={{  }}>
+                            <Icon type="antdesign" name="checkcircleo" color={'green'} />
+                        </TouchableOpacity>
+                    }
+                    {
+                        (awbFail.includes(l) || (!awbSuccess.includes(l) && awbSuccess.length > 0)) && 
+                        <TouchableOpacity onPress={{  }}>
+                            <Icon type="antdesign" name="closecircleo" color={'#ed1e24'} />
+                        </TouchableOpacity>
+                    }
+                    {
+                        awbSuccess.length < 1 &&
+                        <TouchableOpacity onPress={{  }}>
+                            <Icon type="entypo" name="circle" color={'#ed1e24'} />
+                        </TouchableOpacity>
+                    }
                     <ListItem.Content>
                         <ListItem.Title>{l}</ListItem.Title>
                     </ListItem.Content>
@@ -424,10 +437,17 @@ export default function assignPickupCourier(){
             }
             {
                 !openCamera && 
-                <TouchableOpacity onPress={()=>{assignHandler()}} style={{
+                <TouchableOpacity disabled={loading} onPress={()=>{assignHandler()}} style={{
                     borderWidth:1, borderColor:'#ed1e24', width:'100%', height:50,justifyContent:'center', backgroundColor:'#ed1e24'
                 }}>
+                {
+                    loading &&
+                    <ActivityIndicator color={'white'}/>
+                }
+                {
+                    !loading && 
                     <Text style={{textAlign:'center', fontWeight:'bold', color:'white'}}>Assign</Text>
+                }
                 </TouchableOpacity>
             }
            
