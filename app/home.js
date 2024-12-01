@@ -1,26 +1,45 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TextInput, Image } from 'react-native';
-import { router, Link } from "expo-router";
+import { StyleSheet, Text, View, SafeAreaView, TouchableOpacity, TextInput, Image, ScrollView, useWindowDimensions } from 'react-native';
+import { Link, router } from "expo-router";
 import Header from './_components/Header';
 import Footer from './_components/Footer';
-import { useState, useEffect } from 'react';
+import { useEffect, useState} from 'react';
+import { HomeMenu } from './_components/RolesHome';
 import * as SecureStore from 'expo-secure-store';
+//icons 
+// import mobil from '../assets/mobil.png';
+// import mobilb from '../assets/mobil2.png';
+// import motor from '../assets/motor.png';
+// import box from '../assets/box.png';
+// import boxgagal from '../assets/boxgagal.png';
+// import dikirimkurir from '../assets/dikirimkurir.png';
+// import scan from '../assets/scan.png';
+// import sirine from '../assets/sirine.png';
+// import pending from '../assets/pending.png';
 
 export default function home() {
 
-  const [token, setToken] = useState("");
+  const windowHeight = useWindowDimensions().height
+  const [role, setRole] = useState();
+  const [list, setList] = useState([]);
 
-  const getToken = (secured_token) => {
-    setToken(secured_token);
-  }
+  useEffect(() => {
+    async function getValueFor(key) {
+      await SecureStore.getItemAsync(key).then((result) => {
+        if(result){
+          setRole(result);
+            setList(HomeMenu(result));
+        }
+      });
+    }
+    getValueFor('secured_role');
+  }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-
+    <SafeAreaView style={[styles.container, { minHeight: Math.round(windowHeight) }] }>
+    
       <View style={styles.headerContainer}>
-        <Header getToken={getToken}/>
+        <Header />
       </View>
-
       <View style={styles.searchContainer }>
         <TextInput
           style={styles.input}
@@ -30,67 +49,24 @@ export default function home() {
         />
       </View>
 
-      <View style={styles.contentBackground }>
-
+      <ScrollView style={styles.contentBackground }>
         <View style={styles.contentList}>
-          <Link href="/listPickup" asChild>
+      {  
+        
+        list.map((l, i) => (
+          <Link href={l.ref} asChild key={i}>
             <TouchableOpacity style={styles.contentItem}>
-              <Image source={require('../assets/mobil.png')} />
-              <Text style={styles.contentText}>List Pickup</Text>
+              <Image source={l.src} style={styles.iconImage}/>
+              <Text style={styles.contentText}>{l.text}</Text>
             </TouchableOpacity>
           </Link>
-          <Link href="/listPickUpSuccess" asChild>
-            <TouchableOpacity   style={styles.contentItem}>
-              <Image source={require('../assets/motor.png')} />
-              <Text style={styles.contentText}>Pickup Sukses</Text>
-            </TouchableOpacity>
-          </Link>
-          <Link href="/listPickUpFail" asChild>
-            <TouchableOpacity style={styles.contentItem}>
-              <Image source={require('../assets/box.png')} />
-              <Text style={styles.contentText}>Gagal Pickup</Text>
-            </TouchableOpacity>
-          </Link>
+      ))
+    }
+
         </View>
-
-        <View style={styles.contentList}>
-          <Link href="/listDelivery" asChild>
-            <TouchableOpacity style={styles.contentItem}>
-              <Image source={require('../assets/mobil2.png')} />
-              <Text style={styles.contentText}>List Delivery</Text>
-            </TouchableOpacity>
-          </Link>
-          <Link href="/listDeliverySuccess" asChild>
-            <TouchableOpacity   style={styles.contentItem}>
-              <Image source={require('../assets/dikirimkurir.png')} />
-              <Text style={styles.contentText}>Delivery Sukses</Text>
-            </TouchableOpacity>
-          </Link>
-          <Link href="/listDeliveryFail" asChild>
-            <TouchableOpacity style={styles.contentItem}>
-              <Image source={require('../assets/boxgagal.png')} />
-              <Text style={styles.contentText}>Delivery Gagal</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
-
-        <View style={styles.contentList}>
-          <Link href="/scanMenu" asChild>
-            <TouchableOpacity style={styles.contentItem}>
-              <Image source={require('../assets/scan.png')} />
-              <Text style={styles.contentText}>Scan AWB</Text>
-            </TouchableOpacity>
-          </Link>
-          <TouchableOpacity style={styles.contentItem}>
-            <Image source={require('../assets/sirine.png')} />
-            <Text style={styles.contentText}>Emergency</Text>
-          </TouchableOpacity>
-        </View>
-
-      </View>
-
-      <View style={{ flex:4 }}></View>
-    <Footer  />
+        
+      </ScrollView>
+    <Footer />
     </SafeAreaView>
   );
 }
@@ -102,17 +78,16 @@ const styles = StyleSheet.create({
     flexDirection:'column',
   },
   headerContainer : {
-    flex:2,
+    height:'10%',
   },
   searchContainer : {
     backgroundColor:'#FAF8ED',
     borderRadius:10,
-    margin : 10,
-    flex:2,
+    marginHorizontal : 10,
+    height:'10%',
     justifyContent:'space-around'
   },
   input: {
-    height: 50,
     margin: 12,
     borderWidth: 1,
     padding: 10,
@@ -120,9 +95,9 @@ const styles = StyleSheet.create({
     borderRadius:5
   },
   contentBackground : {
-    flex:8,
+    height:'70%',
     padding:10, 
-    margin:10,
+    margin:15,
     borderRadius:20,
     backgroundColor:'#FAF8ED', 
   },
@@ -130,6 +105,7 @@ const styles = StyleSheet.create({
     flex:1,
     flexDirection:'row',
     justifyContent:'flex-start',
+    flexWrap : 'wrap'
   },
   contentItem : {
     padding:10, 
@@ -138,7 +114,11 @@ const styles = StyleSheet.create({
     borderWidth:1, 
     borderRadius:10,
     alignItems:'center',
-    justifyContent:'space-evenly'
+    justifyContent:'space-evenly',
+    width:'30%'
+  },
+  iconImage:{
+    resizeMode : 'contain'
   },
   contentText : {
     fontSize:12,

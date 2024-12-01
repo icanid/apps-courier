@@ -2,30 +2,46 @@ import { StyleSheet, Text, SafeAreaView, View, ScrollView, FlatList, ActivityInd
 import Header from '../_components/Header';
 import Footer from '../_components/Footer';
 import { useState, useEffect } from 'react';
-import AccordionPickUp from '../_components/AccordionPickUp';
+import AccordionDelivery from '../_components/AccordionDelivery';
 import { Divider, Skeleton, Dialog } from '@rneui/themed';
 import { useLocalSearchParams, router } from 'expo-router';
+import CanvasCamera from '../_components/CanvasCamera';
 import { HostUri } from '../_components/HostUri';
 import * as SecureStore from 'expo-secure-store';
 import axios from 'axios';
-import CustomDatePick from '../_components/CustomDatePick';
+import * as ImageManipulator from 'expo-image-manipulator';
 
-export default function detailListPickup() {
+
+export default function detailListDelivery() {
     const { id } = useLocalSearchParams();
     const [bigdata, setBigData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [loadingHttp, setLoadingHttp] = useState(false);
     const [err, setErr] = useState('')
+    const [startCamera, setStartCamera] = useState(false);
+    const [loadingHttp, setLoadingHttp] = useState(false);
 
     const [currentPage, setCurrentPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [total, setTotal] = useState(0);
     const [loadingmore, setLoadingmore]= useState(false);
     
+    const [returnData, setReturnData] = useState({
+      shipping_id : '',
+      selected_choice : '',
+      name : '',
+      check : '',
+      reason : '',
+    });
+   
+    
+    const choiceList = [9, 10, 13];
+    const reasonList = ['Tidak ada orang', 'Invalid Address', 'Ditolak Penerima', 'Alasan Lain'];
+  
     useEffect(() => {
         getData();
     }, []);
 
+    
     const getMore = () => {
       if(currentPage < lastPage){
         setLoadingmore(true);
@@ -38,7 +54,7 @@ export default function detailListPickup() {
     await SecureStore.getItemAsync('secured_token').then((token) => {
       axios({
         method: "get",
-        url: HostUri+`pickup/seller/${id}?page=`+currentPage,
+        url: HostUri+`delivery/seller/${id}?page=`+currentPage,
         headers: {
           "Content-Type": 'application/json',
           "Authorization" : `Bearer ${token}`,
@@ -57,11 +73,11 @@ export default function detailListPickup() {
            setLastPage(response.data.data.last_page);
            setTotal(response.data.data.total)
         }).catch(function (error) {
+          setLoading(false);
+          setLoadingmore(false);
           // masuk ke server tapi return error (unautorized dll)
           if (error.response) {
-           setLoadingmore(false);
-           //gagal login
-            setLoading(false);
+            //gagal login
             if(error.response.data.message == 'Unauthenticated.' || error.response.data.message == 'Unauthorized')
             {
               SecureStore.deleteItemAsync('secured_token');
@@ -73,73 +89,111 @@ export default function detailListPickup() {
             // console.error(error.response.headers);
           } else if (error.request) {
             // ga konek ke server
-           setLoadingmore(false);
-           setLoading(false);
             alert('Check Koneksi anda !')
             console.error(error.request);
-          } else {
            setLoadingmore(false);
            setLoading(false);
+          } else {
             // error yang ga di sangka2
             console.error("Error", error.message);
+           setLoadingmore(false);
+           setLoading(false);
           }
       });
     });
     }
-    const onPressUpdate = async (shipping_id, selected_choice = null, reason = '') =>{
-        // choice
-        //   {key:'1', value:'Pickup Sukses'},
-        //   {key:'2', value:'Pickup Gagal'},
-        let choice = [4, 3];
-        // ALL REQUEST shipping_id, selected_tracking, alasan
-        setLoadingHttp(true);
-        
-        await SecureStore.getItemAsync('secured_token').then((token) => {
-        axios({
-          method: "post",
-          url: HostUri+'pickup/update',
-          headers: {
-            "Content-Type": 'application/json',
-            "Authorization" : `Bearer ${token}`,
-          },
-          data : {
-            shipping_id: shipping_id,
-            selected_tracking: choice[(selected_choice-1)],
-            alasan : reason
-        }
-        }).then(function (response) {
-            // berhasil
-            // router.back();
-            setLoadingHttp(false);
-            setLoading(true);
-            getData();
-            setLoading(false);
-          }).catch(function (error) {
-            // masuk ke server tapi return error (unautorized dll)
-            setLoadingHttp(false);
-            if (error.response) {
-              //gagal login
-              if(error.response.data.message == 'Unauthenticated.' || error.response.data.message == 'Unauthorized')
-              {
-                SecureStore.deleteItemAsync('secured_token');
-                SecureStore.deleteItemAsync('secured_name');
-                router.replace('/');
-              }
-              // console.error(error.response.data);
-              // console.error(error.response.status);
-              // console.error(error.response.headers);
-            } else if (error.request) {
-              // ga konek ke server
-              setLoadingHttp(false);
-              alert('Check Koneksi anda !')
-              console.error(error.request);
-            } else {
-              // error yang ga di sangka2
-              setLoadingHttp(false);
-              console.error("Error", error.message);
-            }
+
+    const onPressUpdate = (id_return, choice_return = '', name_return = '', check_return = '', reason_return = '') => {
+      if(choice_return == 1){
+        setReturnData({
+          shipping_id : id_return,
+          selected_choice : choice_return,
+          name : name_return,
+          check : check_return,
+          reason : reason_return,
         });
-    });
+        setStartCamera(true);
+      }else{
+        updateShipping(id_return, choice_return, name_return, check_return, reason_return);
+      }
+    }
+
+    const returnImage = (uri) =>
+    {
+      setStartCamera(false);
+      updateShipping(returnData.shipping_id, returnData.selected_choice, returnData.name, returnData.check, returnData.reason, uri.uri);
+      // console.log(returnData);
+    }
+    const updateShipping = async (shipping_id, selected_choice, name, check, reason, img='') =>{
+     // choice
+      //   {key:'1', value:'Pickup Sukses'},
+      //   {key:'2', value:'Pickup Gagal'},
+      // ALL REQUEST shipping_id, selected_tracking, alasan
+      let true_reason = (check == 4) ? reason : reasonList[check-1];
+      let formData = new FormData();
+      formData.append('shipping_id', shipping_id);
+      formData.append('selected_tracking', choiceList[(selected_choice-1)]);
+      formData.append('alasan', true_reason);
+      if(img != ''){
+        const manipResult = await ImageManipulator.manipulateAsync(
+          img,
+          [],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        ); 
+        let filename = manipResult.uri.split('/').pop();
+        let match = /\.(\w+)$/.exec(filename);
+        let type = match ? `image/${match[1]}` : `image`;
+        formData.append('img', { uri: manipResult.uri, name: filename, type });
+      }
+      setLoadingHttp(true);
+      await SecureStore.getItemAsync('secured_token').then((token) => {
+        let optHeader = {"Content-Type": 'multipart/form-data', "Authorization" : `Bearer ${token}`};
+      axios({
+        method: "post",
+        url: HostUri+'delivery/update',
+        headers: optHeader,
+        // data : {
+        //   shipping_id: shipping_id,
+        //   selected_tracking: choiceList[(selected_choice-1)],
+        //   alasan : true_reason,
+        //   img : { uri: img, name: filename, type:type }
+        // }
+        data : formData
+      }).then(function (response) {
+          // berhasil
+          setLoadingHttp(false);
+          setLoading(true);
+          getData();
+          setLoading(false);
+        }).catch(function (error) {
+          // masuk ke server tapi return error (unautorized dll)
+          if (error.response) {
+            //gagal login
+            setLoadingHttp(false);
+            if(error.response.data.message == 'Unauthenticated.' || error.response.data.message == 'Unauthorized')
+            {
+              SecureStore.deleteItemAsync('secured_token');
+              SecureStore.deleteItemAsync('secured_name');
+              router.replace('/');
+            }else{
+              alert('Gagal ('+error.response.data.message+')');
+            }
+            // console.error(error.response.data);
+            // console.error(error.response.status);
+            // console.error(error.response.headers);
+          } else if (error.request) {
+            // ga konek ke server
+            setLoadingHttp(false);
+            alert('Check Koneksi anda !')
+            // console.error(error.request);
+          } else {
+            setLoadingHttp(false);
+            alert('Fatal Error Please Contact Admin');
+            // error yang ga di sangka2
+            // console.error("Error", error.message);
+          }
+      });
+  });
     }
 
     return (
@@ -149,25 +203,28 @@ export default function detailListPickup() {
             <Header/>
           </View>
 
-          <View style={styles.datepickContainer}>
-            <View >
-              <CustomDatePick />
-            </View>
-            <View>
-              <CustomDatePick />
-            </View>
+          <View style={styles.headerChild}>
+            <Text style={styles.tanggal}>{ new Date().toLocaleDateString('id-ID', {weekday: 'long',  month: 'long', day:'2-digit', year :'numeric' }) }</Text>
+            <Text style={styles.dropdownContainer}>Total {total} AWB</Text>
           </View>
 
-            <View style={styles.listContainer}>
+          <View style={styles.listContainer}>
+          {
+            startCamera &&
+            <CanvasCamera startCamera={startCamera} returnImage = {returnImage}/>
+          }
+          {!startCamera && 
+            (
+            <View>
             <FlatList               
             data={bigdata}
             keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item }) =>  <AccordionPickUp data={ item } onPressUpdate ={onPressUpdate} />}
+            renderItem={({ item }) =>  <AccordionDelivery data={ item } onPressUpdate ={onPressUpdate} reasonList ={reasonList}  />}
             initialNumToRender={15}   // how many item to display first
             onEndReachedThreshold={0.5} // so when you are at 5 pixel from the bottom react run onEndReached function
             ListHeaderComponent ={
               <View>
-              <Text>Pickup Seller</Text>
+              <Text>Delivery List</Text>
               <Divider
                   style={{margin: 5 }}
                   color="red"
@@ -228,6 +285,9 @@ export default function detailListPickup() {
               }
           />
             </View>
+            )
+            }
+          </View>
 
           <Footer  />
         </SafeAreaView>
@@ -241,6 +301,7 @@ const styles = StyleSheet.create({
     flexDirection:'column',
   },
   headerContainer : {
+    // flex:2,
     height:'10%'
   },
   headerChild : {
@@ -260,14 +321,8 @@ const styles = StyleSheet.create({
     fontWeight:'bold'
   },
   listContainer : {
-    // height:'70%',
-    flex:12,
-    paddingHorizontal:10
-  },
-  datepickContainer : { 
-    height:'10%',
-    flexDirection : 'row', 
-    alignItems: "center", 
-    justifyContent: "space-evenly" 
-  },
+    flex : 13,
+    paddingLeft:10,
+    paddingRight:10,
+  }
 });

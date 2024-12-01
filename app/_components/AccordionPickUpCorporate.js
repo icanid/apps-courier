@@ -1,23 +1,23 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, Linking, ActivityIndicator } from 'react-native';
-import { ListItem, Dialog, CheckBox } from '@rneui/themed';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Linking } from 'react-native';
+import { ListItem, Dialog, CheckBox, Overlay } from '@rneui/themed';
 import {SelectList} from 'react-native-dropdown-select-list';
+import ShowPickUpReceipt from './ShowPickUpReceipt';
 
-const AccordionPickUp = (props) => {
+const AccordionPickUpCorporate = (props) => {
     const [expanded, setExpanded] = useState(false);
     const [showModal, setShowModal] = useState(false);
     const [checked, setChecked] = useState(1);
     const [selected, setSelected] = useState(1);
     const [reasonText, setReasonText] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [showRecept, setShowRecept] = useState(false);
+   
     const onPressUpdate = props.onPressUpdate;
+    const reasonList = props.reasonList;
     const choice = [
-      // {key:'1', value:'Seller', disabled:true},
       {key:'1', value:'Pickup Sukses'},
       {key:'2', value:'Pickup Gagal'},
     ];
-    const reason = ['Dangerous Goods', 'Invalid Address', 'Packing Rusak', 'Paket Belum Siap', 'Alasan Lain'];
-
 
     let data = props.data;
 
@@ -25,16 +25,19 @@ const AccordionPickUp = (props) => {
       setShowModal(!showModal);
     };
 
-    const updateToSuccessHandler = async(shipping_id, selected_choice) => {
-      let submitReason = '';
-      if(selected_choice == 2){
-        submitReason = (checked == 5) ? reasonText : reason[checked-1];
-      }
-      setLoading(true);
-      await onPressUpdate(shipping_id, selected_choice, submitReason);
-      setLoading(false);
+    const toggleReceipt = () => {
+      setShowRecept(!showRecept);
+    }
+
+    const updateHandler = (order_corporate_id, name, count, weight) => {
+      onPressUpdate(order_corporate_id, selected, '', checked, reasonText, name, count, weight );
       setShowModal(!showModal);
       resetChoice();
+    }
+
+    const resetChecked = () => {
+      setReasonText('');
+      setChecked(1);
     }
 
     const resetChoice = () =>{
@@ -47,7 +50,7 @@ const AccordionPickUp = (props) => {
         <ListItem.Accordion
         content={
           <ListItem.Content>
-            <ListItem.Title><Text style={{ color:'white' }}>{data.shipping_awb}{ data.shipping_cod != 'no' && (<Text> - COD</Text>)}</Text></ListItem.Title>
+            <ListItem.Title><Text style={{ color:'white' }}>{data.order_corporate_trx_id}</Text></ListItem.Title>
           </ListItem.Content>
         }
         isExpanded={expanded}
@@ -61,39 +64,49 @@ const AccordionPickUp = (props) => {
           <ListItem.Content>
             <View style={{ flexDirection:'row' }}>
                 <View style={{ flex:1 }}>
-                    <Text>{data.transaction_address_detail}</Text>
-                    {data.kelurahan && <Text>Kel. {data.kelurahan}{data.city_name && <Text> Kota. {data.city_name}</Text>}</Text>}
-                    {data.province_name && <Text>Prov. {data.province_name} {data.zipcode && <Text>{data.zipcode} </Text>}</Text>}
+                    <Text>{data.company_name}</Text>
+                    <Text>{data.complete_address}</Text>
+                    {
+                      // data.kelurahan && <Text>Kel. {data.kelurahan}{data.city_name && <Text> Kota. {data.city_name}</Text>}</Text>
+                    }
+                    {
+                      // data.province_name && <Text>Prov. {data.province_name} {data.zipcode && <Text>{data.zipcode} </Text>}</Text>
+                    }
+                    {
+                      data.order_corporate_count && <Text>Jumlah Paket : {data.order_corporate_count}</Text>
+                    }
+                    {
+                      data.order_corporate_weight && <Text>Estimasi Berat : {data.order_corporate_weight} gram</Text>
+                    }
                     {data.telp && <Text>Telp. {data.telp}</Text>}
-                    {data.shipping_product_weight && <Text>Berat : {data.shipping_product_weight} gram</Text>}
-                    {data.shipping_status == 'pickedup' && <Text>Status : Pickup Success</Text>}
-                    {data.tracking_status_id == '3' && data.reason && <Text>Status : {data.reason.shipping_history_desc.split(".")[1]}</Text>}
-
+                    {data.order_corporate_status == 'picked up' && <Text>Status : Pickup Success</Text>}
+                    {data.order_corporate_status == 'cancel' && <Text>Status : {data.order_corporate_reason}</Text>}
                  </View>
-                {( data.tracking_status_id  == '2')  && (<View><TouchableOpacity><Text onPress={toggleModal} style={{ color:'blue',  fontWeight:'bold' }}>Update</Text></TouchableOpacity></View>)}
-          <Dialog isVisible={loading} overlayStyle={{backgroundColor:'rgba(52, 52, 52, 0.5)' }}>
-            <ActivityIndicator />
-          </Dialog>
+                {( data.order_corporate_status != 'picked up')  && (<View><TouchableOpacity><Text onPress={toggleModal} style={{ color:'blue',  fontWeight:'bold' }}>Update</Text></TouchableOpacity></View>)}
+                
            <Dialog
               isVisible={showModal}
               // onBackdropPress={toggleModal}
             >
           <Dialog.Title title=""/>
           <SelectList 
-                setSelected={(val) => {setSelected(val)}} 
+                setSelected={(val) => {resetChecked;setSelected(val)}} 
                 data={choice} 
                 save="key"
                 placeholder='Pickup Sukses'
                 dropdownStyles={{ zIndex:999, minHeight:100, backgroundColor : 'white' }}
                 boxStyles={{ margin:10, borderColor:'red' }}
             />
+            {
+              selected == 1 && <Text style={{ backgroundColor:'red', color:'white', padding:2, alignSelf:'center' }}>Pastikan Jumlah Paket sudah sesuai</Text>
+            }
             { 
               selected == 1 
               && 
               <Dialog.Actions>
           <Dialog.Button
-            title="UPDATE"
-            onPress={() => {updateToSuccessHandler(data.shipping_id, selected);}}
+            title="Update dan Ambil Foto"
+            onPress={() => {updateHandler(data.order_corporate_id, data.company_name, data.order_corporate_count, data.order_corporate_weight);}}
             titleStyle={{ color:'red' }}
           />
           <Dialog.Button title="CANCEL" onPress={()=>{resetChoice();toggleModal();}} titleStyle={{ color:'red' }}/>
@@ -102,7 +115,7 @@ const AccordionPickUp = (props) => {
             { 
               selected == 2 
               && 
-              reason.map((l, i) => (
+              reasonList.map((l, i) => (
                 <CheckBox
                   key={i}
                   title={l}
@@ -132,7 +145,7 @@ const AccordionPickUp = (props) => {
             //   console.log(`Option ${checked} was selected! and ${reasonText}`);
             //   toggleModal();
             // }}
-            onPress={() => {updateToSuccessHandler(data.shipping_id, selected);}}
+            onPress={() => {updateHandler(data.order_corporate_id);}}
             titleStyle={{ color:'red' }}
           />
           <Dialog.Button title="CANCEL" onPress={()=>{resetChoice();toggleModal();}} titleStyle={{ color:'red' }}/>
@@ -141,15 +154,32 @@ const AccordionPickUp = (props) => {
          
           </Dialog>
             </View>
-            { data.tracking_status_id == '2' &&
-            (
+            { (data.order_corporate_status != 'picked up') &&
+              (
             <View style={styles.buttongroup}>
                 <TouchableOpacity style={styles.button}><Text style={{ color:'white', textAlign : 'center' }}>WA Call</Text></TouchableOpacity>
                 <TouchableOpacity style={styles.button}><Text style={{ color:'white', textAlign : 'center' }} onPress={()=>{Linking.openURL(`http://api.whatsapp.com/send?phone=${data.telp.replace(data.telp[0], '+62')}`)}}>WA Chat</Text></TouchableOpacity>
                 <TouchableOpacity style={styles.button}><Text style={{ color:'white', textAlign : 'center' }}>Navigasi</Text></TouchableOpacity>
             </View>
             )
-            }
+          }
+          { (data.order_corporate_status == 'picked up') &&
+              (
+            <View style={styles.buttongroup}>
+                <TouchableOpacity style={styles.button} onPress={()=>{toggleReceipt()}}><Text style={{ color:'white', textAlign : 'center' }}>Lihat Tanda Terima</Text></TouchableOpacity>
+            </View>
+            )
+          }
+          <Overlay isVisible={showRecept} onBackdropPress={()=>{toggleReceipt()}}>
+          <ShowPickUpReceipt 
+          sender = {data.company_name}
+          total = {data.order_corporate_count}
+          weight = {data.order_corporate_weight}
+          img = {data.order_corporate_img}
+          name = {data.order_corporate_submiter}
+          hp = {data.order_corporate_submiter_phone}
+          />
+        </Overlay>
           </ListItem.Content>
         </ListItem>
       </ListItem.Accordion>
@@ -193,4 +223,4 @@ const styles = StyleSheet.create({
     }
 });
     
-export default AccordionPickUp;
+export default AccordionPickUpCorporate;
